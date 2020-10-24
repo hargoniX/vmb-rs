@@ -166,6 +166,35 @@ impl From<u8> for Id {
     }
 }
 
+impl Into<u8> for Id {
+    fn into(self) -> u8 {
+        match self {
+            Self::Ignore => id::IGNORE,
+            Self::Read => id::READ,
+            Self::Write => id::WRITE,
+            Self::Readreply => id::READREPLY,
+            Self::Noreply => id::NOREPLY,
+            Self::Readbyte => id::READBYTE,
+            Self::Readwyde => id::READWYDE,
+            Self::Readtetra => id::READTETRA,
+            Self::Writebyte => id::WRITEBYTE,
+            Self::Writewyde => id::WRITEWYDE,
+            Self::Writetetra => id::WRITETETRA,
+            Self::Bytereply => id::BYTEREPLY,
+            Self::Wydereply => id::WYDEREPLY,
+            Self::Tetrareply => id::TETRAREPLY,
+            Self::Terminate => id::TERMINATE,
+            Self::Register => id::REGISTER,
+            Self::Unregister => id::UNREGISTER,
+            Self::Interrupt => id::INTERRUPT,
+            Self::Reset => id::RESET,
+            Self::Poweroff => id::POWEROFF,
+            Self::Poweron => id::POWERON,
+            Self::Other(val) => val,
+        }
+    }
+}
+
 /// A wrapper around the bus bit of the TYPE part of the message header.
 pub enum Bus {
     /// This is a message from device to device which just needs to be forwarded by the bus.
@@ -180,6 +209,15 @@ impl From<bool> for Bus {
         match bit {
             false => Self::DeviceMessage,
             true => Self::BusMessage,
+        }
+    }
+}
+
+impl Into<bool> for Bus {
+    fn into(self) -> bool {
+        match self {
+            Self::DeviceMessage => false,
+            Self::BusMessage => true,
         }
     }
 }
@@ -199,6 +237,15 @@ impl From<bool> for Route {
         match bit {
             false => Self::OtherRoute,
             true => Self::SlotRoute,
+        }
+    }
+}
+
+impl Into<bool> for Route {
+    fn into(self) -> bool {
+        match self {
+            Self::OtherRoute => false,
+            Self::SlotRoute => true,
         }
     }
 }

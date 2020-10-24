@@ -36,6 +36,18 @@ impl From<[u8; 4]> for Header {
     }
 }
 
+impl Into<u64> for Header {
+    fn into(self) -> u64 {
+        let r#type: u8 = self.r#type.into();
+        let id: u8 = self.id.into();
+
+        ((r#type as u64) << 3 * 8)
+            | ((self.size as u64) << 2 * 8)
+            | ((self.slot as u64) << 8)
+            | (id as u64)
+    }
+}
+
 /// The TYPE Byte in the Header has the following bits: bus, time, address, route, payload,
 /// request, lock, unused.
 pub struct Type {
@@ -86,5 +98,21 @@ impl From<u8> for Type {
             lock: (byte & 1 << 1) != 0,
             unused: (byte & 1) != 0,
         }
+    }
+}
+
+impl Into<u8> for Type {
+    fn into(self) -> u8 {
+        let bus: bool = self.bus.into();
+        let route: bool = self.route.into();
+
+        ((bus as u8) << 7)
+            | ((self.time as u8) << 6)
+            | ((self.address as u8) << 5)
+            | ((route as u8) << 4)
+            | ((self.payload as u8) << 3)
+            | ((self.request as u8) << 2)
+            | ((self.lock as u8) << 1)
+            | (self.unused as u8)
     }
 }

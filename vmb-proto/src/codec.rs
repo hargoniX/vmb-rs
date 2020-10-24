@@ -5,16 +5,16 @@ use crate::message::{ExtendedHeader, Header, Message};
 use crate::types::Octa;
 
 use byteorder::{BigEndian, ByteOrder};
-use bytes::BytesMut;
-use tokio_util::codec::Decoder;
+use bytes::{Buf, BufMut, BytesMut};
+use tokio_util::codec::{Decoder, Encoder};
 
 use std::io::Error;
 use std::mem;
 
 #[derive(Copy, Clone, Debug)]
-struct VmbDecoder {}
+pub struct VmbCodec {}
 
-impl Decoder for VmbDecoder {
+impl Decoder for VmbCodec {
     type Item = Message;
     type Error = Error;
 
@@ -25,30 +25,30 @@ impl Decoder for VmbDecoder {
 
         let header = Header::from([src[0], src[1], src[2], src[3]]);
 
-        let (_, src) = src.split_at(4);
+        src.advance(4);
 
-        let (timestamp, src) = if header.r#type.time {
+        let timestamp = if header.r#type.time {
             if src.len() < 4 {
                 return Ok(None);
             }
 
             let timestamp = BigEndian::read_u32(&src[0..4]);
-            let (_, src) = src.split_at(4);
-            (Some(timestamp), src)
+            src.advance(4);
+            Some(timestamp)
         } else {
-            (None, src)
+            None
         };
 
-        let (address, src) = if header.r#type.address {
+        let address = if header.r#type.address {
             if src.len() < 8 {
                 return Ok(None);
             }
 
             let address = BigEndian::read_u64(&src[0..8]);
-            let (_, src) = src.split_at(8);
-            (Some(address), src)
+            src.advance(8);
+            Some(address)
         } else {
-            (None, src)
+            None
         };
 
         let payload = if header.r#type.payload {
@@ -58,12 +58,13 @@ impl Decoder for VmbDecoder {
                 return Ok(None);
             }
 
-            let mut payload = BytesMut::with_capacity(payload_size);
-            payload.extend_from_slice(&src[0..payload_size]);
-            Some(payload)
+            Some(src.split_to(payload_size))
         } else {
             None
         };
+
+        // Reserve 4 bytes for the next header to increase performance.
+        src.reserve(4);
 
         Ok(Some(Message {
             extended_header: ExtendedHeader {
@@ -73,5 +74,32 @@ impl Decoder for VmbDecoder {
             },
             payload,
         }))
+    }
+}
+
+impl Encoder<Message> for VmbCodec {
+    type Error = Error;
+
+    fn encode(&mut self, msg: Message, buf: &mut BytesMut) -> Result<(), Self::Error> {
+        buf.reserve(MIN_MESSAGE_SIZE as usize);
+        let header: u64 = msg.extended_header.header.into();
+        buf.put_u64(header);
+
+        if let Some(timestamp) = msg.extended_header.timestamp {
+            buf.reserve(mem::size_of::<u32>());
+            buf.put_u32(timestamp);
+        }
+
+        if let Some(address) = msg.extended_header.address {
+            buf.reserve(mem::size_of::<u64>());
+            buf.put_u64(address);
+        }
+
+        if let Some(payload) = msg.payload {
+            buf.reserve(payload.len());
+            buf.put(payload);
+        }
+
+        Ok(())
     }
 }
