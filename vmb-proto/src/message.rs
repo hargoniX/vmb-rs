@@ -5,12 +5,14 @@ use crate::types::{Bus, Id, Route};
 use bytes::BytesMut;
 
 /// A vmb message.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Message {
     pub extended_header: ExtendedHeader,
     pub payload: Option<BytesMut>,
 }
 
 /// The header together with the optional timestamp and the optional address is called the extended header.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct ExtendedHeader {
     pub header: Header,
     pub timestamp: Option<u32>,
@@ -18,6 +20,7 @@ pub struct ExtendedHeader {
 }
 
 /// The header of a message.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Header {
     pub r#type: Type,
     pub size: u8,
@@ -50,6 +53,7 @@ impl Into<u64> for Header {
 
 /// The TYPE Byte in the Header has the following bits: bus, time, address, route, payload,
 /// request, lock, unused.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Type {
     /// See documentation of `Bus`
     pub bus: Bus,

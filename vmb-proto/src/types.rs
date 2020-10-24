@@ -12,6 +12,7 @@ pub type Tetra = u32;
 pub type Octa = u64;
 
 /// A wrapper around the ID byte of the message header.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Id {
     /// The sender of such a message can use the route bit and the SLOT, or the address bit and the
     /// address field to determine the receiver. If neither is specified the bus will ignore this
@@ -196,6 +197,7 @@ impl Into<u8> for Id {
 }
 
 /// A wrapper around the bus bit of the TYPE part of the message header.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Bus {
     /// This is a message from device to device which just needs to be forwarded by the bus.
     DeviceMessage,
@@ -223,6 +225,7 @@ impl Into<bool> for Bus {
 }
 
 /// A wrapper around the route bit of the TYPE part of the message header.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Route {
     /// If this bit is set, send the message to the SLOT byte.
     SlotRoute,
