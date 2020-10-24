@@ -31,7 +31,7 @@ impl From<[u8; 4]> for Header {
             r#type: Type::from(header_bytes[0]),
             size: header_bytes[1],
             slot: header_bytes[2],
-            id: Id::from(header_bytes[3])
+            id: Id::from(header_bytes[3]),
         }
     }
 }
@@ -77,14 +77,14 @@ pub struct Type {
 impl From<u8> for Type {
     fn from(byte: u8) -> Self {
         Self {
-            bus: Bus::from((byte & 1<<7) != 0),
-            time: (byte & 1<<6) != 0,
-            address:(byte & 1<<5) != 0,
-            route: Route::from((byte & 1<<4) != 0),
-            payload:(byte & 1<<3) != 0,
-            request:(byte & 1<<2) != 0,
-            lock:(byte & 1<<1) != 0,
-            unused:(byte & 1) != 0,
+            bus: Bus::from((byte & 1 << 7) != 0),
+            time: (byte & 1 << 6) != 0,
+            address: (byte & 1 << 5) != 0,
+            route: Route::from((byte & 1 << 4) != 0),
+            payload: (byte & 1 << 3) != 0,
+            request: (byte & 1 << 2) != 0,
+            lock: (byte & 1 << 1) != 0,
+            unused: (byte & 1) != 0,
         }
     }
 }

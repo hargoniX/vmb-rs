@@ -1,12 +1,12 @@
 //! Contains a tokio server and client codec for the vmb protocol.
 
-use crate::message::{Message, Header, ExtendedHeader};
 use crate::constants::MIN_MESSAGE_SIZE;
+use crate::message::{ExtendedHeader, Header, Message};
 use crate::types::Octa;
 
-use tokio_util::codec::Decoder;
+use byteorder::{BigEndian, ByteOrder};
 use bytes::BytesMut;
-use byteorder::{ByteOrder, BigEndian};
+use tokio_util::codec::Decoder;
 
 use std::io::Error;
 use std::mem;
@@ -35,8 +35,7 @@ impl Decoder for VmbDecoder {
             let timestamp = BigEndian::read_u32(&src[0..4]);
             let (_, src) = src.split_at(4);
             (Some(timestamp), src)
-        }
-        else {
+        } else {
             (None, src)
         };
 
@@ -48,8 +47,7 @@ impl Decoder for VmbDecoder {
             let address = BigEndian::read_u64(&src[0..8]);
             let (_, src) = src.split_at(8);
             (Some(address), src)
-        }
-        else {
+        } else {
             (None, src)
         };
 
@@ -63,21 +61,17 @@ impl Decoder for VmbDecoder {
             let mut payload = BytesMut::with_capacity(payload_size);
             payload.extend_from_slice(&src[0..payload_size]);
             Some(payload)
-        }
-        else {
+        } else {
             None
         };
 
-        Ok(Some(
-            Message {
-                extended_header: ExtendedHeader{
-                    header,
-                    timestamp,
-                    address
-                },
-                payload
-            }
-        ))
+        Ok(Some(Message {
+            extended_header: ExtendedHeader {
+                header,
+                timestamp,
+                address,
+            },
+            payload,
+        }))
     }
 }
-

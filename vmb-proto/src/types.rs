@@ -179,7 +179,7 @@ impl From<bool> for Bus {
     fn from(bit: bool) -> Self {
         match bit {
             false => Self::DeviceMessage,
-            true => Self::BusMessage
+            true => Self::BusMessage,
         }
     }
 }
