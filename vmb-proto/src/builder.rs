@@ -204,7 +204,7 @@ impl MessagerBuilder {
         // The reason route is set to SlotRoute unlike the spec which says "any", is that
         // OtherRoute would be an invalid value since the Id is neither 0 nor is bus set to
         // BusMessage.
-        let mut builder = MessagerBuilder::new().bus(Bus::DeviceMessage).address(address).id(id).route(Route::SlotRoute).unwrap().slot(slot);
+        let mut builder = MessagerBuilder::new().bus(Bus::DeviceMessage).address(address).id(id).route(Route::SlotRoute).unwrap().slot(slot).payload(payload).unwrap();
 
         // The unwrap() is fine since we did a more specific check for the length above.
         if let Some(timestamp) = timestamp {
@@ -215,12 +215,7 @@ impl MessagerBuilder {
             builder = builder.lock();
         }
 
-        let mut message = builder.finalize();
-        message.extended_header.header.size = 0;
-        message.extended_header.header.r#type.payload = true;
-        message.payload = Some(payload);
-
-        Ok(message)
+        Ok(builder.finalize())
     }
     /// Constructs a WRITEBYTE message.
     pub fn new_writebyte(timestamp: Option<u32>, address: u64, mut payload: BytesMut, lock: bool, slot: u8) -> Result<Message, MessageBuilderError> {

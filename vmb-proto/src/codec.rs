@@ -20,6 +20,8 @@ impl Decoder for VmbCodec {
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         if src.len() < MIN_MESSAGE_SIZE as usize {
+            // Reserve enough bytes so we get our header next time.
+            src.reserve(MIN_MESSAGE_SIZE as usize - src.len());
             return Ok(None);
         }
 
@@ -27,11 +29,26 @@ impl Decoder for VmbCodec {
 
         src.advance(4);
 
-        let timestamp = if header.r#type.time {
-            if src.len() < 4 {
-                return Ok(None);
-            }
+        let payload_size = if header.r#type.payload {
+            // 8 * (SIZE + 1) payload
+            (header.size as usize + 1) * mem::size_of::<Octa>()
+        } else {
+            0
+        };
 
+        let remaining_length =
+            // 4 byte timestamp
+            4 * header.r#type.time as usize +
+            // 8 byte address
+            8 * header.r#type.address as usize +
+            payload_size;
+
+        if src.len() < remaining_length {
+            src.reserve(remaining_length - src.len());
+            return Ok(None);
+        }
+
+        let timestamp = if header.r#type.time {
             let timestamp = BigEndian::read_u32(&src[0..4]);
             src.advance(4);
             Some(timestamp)
@@ -40,10 +57,6 @@ impl Decoder for VmbCodec {
         };
 
         let address = if header.r#type.address {
-            if src.len() < 8 {
-                return Ok(None);
-            }
-
             let address = BigEndian::read_u64(&src[0..8]);
             src.advance(8);
             Some(address)
@@ -52,19 +65,15 @@ impl Decoder for VmbCodec {
         };
 
         let payload = if header.r#type.payload {
-            let payload_size = (header.size as usize + 1) * mem::size_of::<Octa>();
-
-            if src.len() < payload_size {
-                return Ok(None);
-            }
-
             Some(src.split_to(payload_size))
         } else {
             None
         };
 
-        // Reserve 4 bytes for the next header to increase performance.
-        src.reserve(4);
+        if src.len() < MIN_MESSAGE_SIZE as usize {
+            // Reserve enough bytes so we get our header instantly next time.
+            src.reserve(MIN_MESSAGE_SIZE as usize - src.len());
+        }
 
         Ok(Some(Message {
             extended_header: ExtendedHeader {
@@ -82,8 +91,8 @@ impl Encoder<Message> for VmbCodec {
 
     fn encode(&mut self, msg: Message, buf: &mut BytesMut) -> Result<(), Self::Error> {
         buf.reserve(MIN_MESSAGE_SIZE as usize);
-        let header: u64 = msg.extended_header.header.into();
-        buf.put_u64(header);
+        let header: u32 = msg.extended_header.header.into();
+        buf.put_u32(header);
 
         if let Some(timestamp) = msg.extended_header.timestamp {
             buf.reserve(mem::size_of::<u32>());

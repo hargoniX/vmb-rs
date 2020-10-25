@@ -39,15 +39,15 @@ impl From<[u8; 4]> for Header {
     }
 }
 
-impl Into<u64> for Header {
-    fn into(self) -> u64 {
+impl Into<u32> for Header {
+    fn into(self) -> u32 {
         let r#type: u8 = self.r#type.into();
         let id: u8 = self.id.into();
 
-        ((r#type as u64) << 3 * 8)
-            | ((self.size as u64) << 2 * 8)
-            | ((self.slot as u64) << 8)
-            | (id as u64)
+        ((r#type as u32) << 3 * 8)
+            | ((self.size as u32) << 2 * 8)
+            | ((self.slot as u32) << 8)
+            | (id as u32)
     }
 }
 
