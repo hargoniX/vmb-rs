@@ -1,3 +1,4 @@
+pub mod builder;
 pub mod codec;
 pub mod constants;
 pub mod message;
