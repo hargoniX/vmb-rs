@@ -27,8 +27,6 @@ impl Decoder for VmbCodec {
 
         let header = Header::from([src[0], src[1], src[2], src[3]]);
 
-        src.advance(4);
-
         let payload_size = if header.r#type.payload {
             // 8 * (SIZE + 1) payload
             (header.size as usize + 1) * mem::size_of::<Octa>()
@@ -47,6 +45,8 @@ impl Decoder for VmbCodec {
             src.reserve(remaining_length - src.len());
             return Ok(None);
         }
+
+        src.advance(4);
 
         let timestamp = if header.r#type.time {
             let timestamp = BigEndian::read_u32(&src[0..4]);
