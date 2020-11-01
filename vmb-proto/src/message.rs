@@ -2,13 +2,13 @@
 
 use crate::types::{Bus, Id, Route};
 
-use bytes::BytesMut;
+use bytes::Bytes;
 
 /// A vmb message.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Message {
     pub extended_header: ExtendedHeader,
-    pub payload: Option<BytesMut>,
+    pub payload: Option<Bytes>,
 }
 
 /// The header together with the optional timestamp and the optional address is called the extended header.

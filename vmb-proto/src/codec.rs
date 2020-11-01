@@ -18,6 +18,7 @@ impl Decoder for VmbCodec {
     type Item = Message;
     type Error = Error;
 
+    #[tracing::instrument]
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         if src.len() < MIN_MESSAGE_SIZE as usize {
             // Reserve enough bytes so we get our header next time.
@@ -26,6 +27,7 @@ impl Decoder for VmbCodec {
         }
 
         let header = Header::from([src[0], src[1], src[2], src[3]]);
+        tracing::debug!("Decoded header: {:?}", header);
 
         let payload_size = if header.r#type.payload {
             // 8 * (SIZE + 1) payload
@@ -33,6 +35,7 @@ impl Decoder for VmbCodec {
         } else {
             0
         };
+        tracing::debug!("Expect payload size: {:?}", payload_size);
 
         let remaining_length =
             // 4 byte timestamp
@@ -51,6 +54,7 @@ impl Decoder for VmbCodec {
         let timestamp = if header.r#type.time {
             let timestamp = BigEndian::read_u32(&src[0..4]);
             src.advance(4);
+            tracing::debug!("Timestamp : {:#032b}", timestamp);
             Some(timestamp)
         } else {
             None
@@ -59,13 +63,16 @@ impl Decoder for VmbCodec {
         let address = if header.r#type.address {
             let address = BigEndian::read_u64(&src[0..8]);
             src.advance(8);
+            tracing::debug!("Address : {:#064b}", address);
             Some(address)
         } else {
             None
         };
 
         let payload = if header.r#type.payload {
-            Some(src.split_to(payload_size))
+            let p = src.split_to(payload_size).freeze();
+            tracing::debug!("Payload : {:?}", p);
+            Some(p)
         } else {
             None
         };
@@ -75,37 +82,46 @@ impl Decoder for VmbCodec {
             src.reserve(MIN_MESSAGE_SIZE as usize - src.len());
         }
 
-        Ok(Some(Message {
+        let msg = Message {
             extended_header: ExtendedHeader {
                 header,
                 timestamp,
-                address,
+                address
             },
-            payload,
-        }))
+            payload
+        };
+
+        tracing::info!("Constructed Message: {:?}", msg);
+
+        Ok(Some(msg))
     }
 }
 
 impl Encoder<Message> for VmbCodec {
     type Error = Error;
 
+    #[tracing::instrument]
     fn encode(&mut self, msg: Message, buf: &mut BytesMut) -> Result<(), Self::Error> {
         buf.reserve(MIN_MESSAGE_SIZE as usize);
         let header: u32 = msg.extended_header.header.into();
+        tracing::debug!("Header : {:#032b}", header);
         buf.put_u32(header);
 
         if let Some(timestamp) = msg.extended_header.timestamp {
             buf.reserve(mem::size_of::<u32>());
+            tracing::debug!("Timestamp : {:#032b}", timestamp);
             buf.put_u32(timestamp);
         }
 
         if let Some(address) = msg.extended_header.address {
             buf.reserve(mem::size_of::<u64>());
+            tracing::debug!("Address : {:#064b}", address);
             buf.put_u64(address);
         }
 
         if let Some(payload) = msg.payload {
             buf.reserve(payload.len());
+            tracing::debug!("Payload : {:?}", payload);
             buf.put(payload);
         }
 

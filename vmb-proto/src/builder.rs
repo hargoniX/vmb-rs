@@ -4,7 +4,7 @@ use crate::message::{ExtendedHeader, Header, Message, Type};
 use crate::types::{Id, Bus, Route};
 use crate::constants::MAX_MESSAGE_SIZE;
 
-use bytes::{BytesMut, BufMut};
+use bytes::{BytesMut, Bytes, BufMut};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// A builder pattern struct to create new VMB messages. It provides 2 types of methods:
@@ -109,7 +109,7 @@ impl MessagerBuilder {
     }
 
     /// Constructs a WRITE message.
-    pub fn new_write(timestamp: Option<u32>, address: u64, lock: bool, slot: u8, payload: BytesMut) -> Result<Message, MessageBuilderError> {
+    pub fn new_write(timestamp: Option<u32>, address: u64, lock: bool, slot: u8, payload: Bytes) -> Result<Message, MessageBuilderError> {
         // The unwrap() is fine since setting route to SlotRoute cannot possibly error.
         // The reason route is set to SlotRoute unlike the spec which says "any", is that
         // OtherRoute would be an invalid value since the Id is neither 0 nor is bus set to
@@ -128,7 +128,7 @@ impl MessagerBuilder {
     }
 
     /// Constructs a READREPLY message.
-    pub fn new_readreply(timestamp: Option<u32>, address: u64, lock: bool, slot: u8, payload: BytesMut) -> Result<Message, MessageBuilderError> {
+    pub fn new_readreply(timestamp: Option<u32>, address: u64, lock: bool, slot: u8, payload: Bytes) -> Result<Message, MessageBuilderError> {
         // The unwrap() is fine since setting route to SlotRoute cannot possibly error.
         // The reason route is set to SlotRoute unlike the spec which says "any", is that
         // OtherRoute would be an invalid value since the Id is neither 0 nor is bus set to
@@ -199,7 +199,7 @@ impl MessagerBuilder {
     }
 
     /// The size checks for the payload have to be done by the calling method still.
-    fn write_word_helper(timestamp: Option<u32>, address: u64, payload: BytesMut, lock: bool, slot: u8, id: Id) -> Result<Message, MessageBuilderError> {
+    fn write_word_helper(timestamp: Option<u32>, address: u64, payload: Bytes, lock: bool, slot: u8, id: Id) -> Result<Message, MessageBuilderError> {
         // The unwrap() is fine since setting route to SlotRoute cannot possibly error.
         // The reason route is set to SlotRoute unlike the spec which says "any", is that
         // OtherRoute would be an invalid value since the Id is neither 0 nor is bus set to
@@ -226,7 +226,7 @@ impl MessagerBuilder {
         payload.reserve(7);
         payload.put_slice(&[0,0,0,0,0,0,0]);
 
-        MessagerBuilder::write_word_helper(timestamp, address, payload, lock, slot, Id::Writebyte)
+        MessagerBuilder::write_word_helper(timestamp, address, payload.freeze(), lock, slot, Id::Writebyte)
     }
 
     /// Constructs a WRITEWYDE message.
@@ -237,7 +237,7 @@ impl MessagerBuilder {
         payload.reserve(6);
         payload.put_slice(&[0,0,0,0,0,0]);
 
-        MessagerBuilder::write_word_helper(timestamp, address, payload, lock, slot, Id::Writewyde)
+        MessagerBuilder::write_word_helper(timestamp, address, payload.freeze(), lock, slot, Id::Writewyde)
     }
 
     /// Constructs a WRITETETRA message.
@@ -249,7 +249,7 @@ impl MessagerBuilder {
         payload.reserve(4);
         payload.put_slice(&[0,0,0,0]);
 
-        MessagerBuilder::write_word_helper(timestamp, address, payload, lock, slot, Id::Writetetra)
+        MessagerBuilder::write_word_helper(timestamp, address, payload.freeze(), lock, slot, Id::Writetetra)
     }
 
     /// Constructs a BYTEREPLY message.
@@ -261,7 +261,7 @@ impl MessagerBuilder {
         payload.reserve(7);
         payload.put_slice(&[0,0,0,0,0,0,0]);
 
-        MessagerBuilder::write_word_helper(timestamp, address, payload, lock, slot, Id::Bytereply)
+        MessagerBuilder::write_word_helper(timestamp, address, payload.freeze(), lock, slot, Id::Bytereply)
     }
 
     /// Constructs a WYDEREPLY message.
@@ -273,7 +273,7 @@ impl MessagerBuilder {
         payload.reserve(6);
         payload.put_slice(&[0,0,0,0,0,0]);
 
-        MessagerBuilder::write_word_helper(timestamp, address, payload, lock, slot, Id::Wydereply)
+        MessagerBuilder::write_word_helper(timestamp, address, payload.freeze(), lock, slot, Id::Wydereply)
     }
 
     /// Constructs a TETRAREPLY message.
@@ -285,7 +285,7 @@ impl MessagerBuilder {
         payload.reserve(4);
         payload.put_slice(&[0,0,0,0]);
 
-        MessagerBuilder::write_word_helper(timestamp, address, payload, lock, slot, Id::Tetrareply)
+        MessagerBuilder::write_word_helper(timestamp, address, payload.freeze(), lock, slot, Id::Tetrareply)
     }
 
     /// Constructs a new TERMINATE message.
@@ -296,7 +296,7 @@ impl MessagerBuilder {
     }
 
     /// Constructs a new REGISTER message.
-    pub fn new_register(timestamp: Option<u32>, lock: bool, slot: u8, payload: BytesMut) -> Result<Message, MessageBuilderError> {
+    pub fn new_register(timestamp: Option<u32>, lock: bool, slot: u8, payload: Bytes) -> Result<Message, MessageBuilderError> {
         let mut builder = MessagerBuilder::new().bus(Bus::BusMessage).id(Id::Register).slot(slot).payload(payload)?.route(Route::OtherRoute).unwrap();
 
         if let Some(timestamp) = timestamp {
@@ -415,7 +415,7 @@ impl MessagerBuilder {
     /// Note that:
     /// 1. The length of the payload may not exceed the `MAX_MESSAGE_SIZE`
     /// 2. The payload must be a multiple of 8 bytes long since VMB requires it to be "Octobytes".
-    pub fn payload(mut self, payload: BytesMut) -> Result<Self, MessageBuilderError> {
+    pub fn payload(mut self, payload: Bytes) -> Result<Self, MessageBuilderError> {
         if payload.len() > MAX_MESSAGE_SIZE as usize || payload.len() % 8 != 0 {
             return Err(MessageBuilderError::PayloadError)
         }
@@ -461,7 +461,7 @@ mod tests {
     use super::Id;
     use std::mem;
     use crate::types::Octa;
-    use bytes::{BytesMut, BufMut};
+    use bytes::{BytesMut, Bytes, BufMut};
 
     const TIME_STAMP: Option<u32> = Some(120);
     const ADDRESS: u64 = 0xff;
@@ -485,13 +485,13 @@ mod tests {
 
     /// Pads the provided payload to a length of 8 so it can be used for write{byte,wyde,tetra} and
     /// {bytw,wyde,tetra}reply tests.
-    fn pad_payload_to_8(mut payload: BytesMut) -> BytesMut {
+    fn pad_payload_to_8(mut payload: BytesMut) -> Bytes {
         let missing = 8 - payload.len();
         payload.reserve(missing);
         for _ in 0..missing {
             payload.put_u8(0);
         }
-        payload
+        payload.freeze()
     }
 
     /// Check that the generated IGNORE message matches the spec.
@@ -533,6 +533,7 @@ mod tests {
     #[test]
     fn test_write() {
         let (payload, size) = dummy_payload(10*8);
+        let payload = payload.freeze();
         let message = MessagerBuilder::new_write(TIME_STAMP, ADDRESS, LOCK, SLOT, payload.clone()).unwrap();
         assert_eq!(message.extended_header.header.r#type.bus, Bus::from(false));
         assert_eq!(message.extended_header.header.r#type.time, true);
@@ -554,6 +555,7 @@ mod tests {
     #[test]
     fn test_readreply() {
         let (payload, size) = dummy_payload(10 * 8);
+        let payload = payload.freeze();
         let message = MessagerBuilder::new_readreply(TIME_STAMP, ADDRESS, LOCK, SLOT, payload.clone()).unwrap();
         assert_eq!(message.extended_header.header.r#type.bus, Bus::from(false));
         assert_eq!(message.extended_header.header.r#type.time, true);
@@ -793,6 +795,7 @@ mod tests {
     #[test]
     fn test_register() {
         let (payload, size) = dummy_payload(32);
+        let payload = payload.freeze();
         let message = MessagerBuilder::new_register(TIME_STAMP, LOCK, SLOT, payload.clone()).unwrap();
         assert_eq!(message.extended_header.header.r#type.bus, Bus::from(true));
         assert_eq!(message.extended_header.header.r#type.time, true);

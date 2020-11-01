@@ -10,7 +10,7 @@ use bytes::{BytesMut, BufMut};
 fn it_encodes_and_decodes_write() {
     let mut payload = BytesMut::with_capacity(16);
     payload.put_slice(b"0123456789123456");
-    let message = MessagerBuilder::new_write(Some(120), 10, true, 5, payload).unwrap();
+    let message = MessagerBuilder::new_write(Some(120), 10, true, 5, payload.freeze()).unwrap();
     let mut codec = VmbCodec {};
     let mut buffer = BytesMut::new();
     codec.encode(message.clone(), &mut buffer).unwrap();
@@ -22,7 +22,7 @@ fn it_encodes_and_decodes_write() {
 fn it_encodes_and_decodes_write_no_timestamp() {
     let mut payload = BytesMut::with_capacity(16);
     payload.put_slice(b"0123456789123456");
-    let message = MessagerBuilder::new_write(None, 10, true, 5, payload).unwrap();
+    let message = MessagerBuilder::new_write(None, 10, true, 5, payload.freeze()).unwrap();
     let mut codec = VmbCodec {};
     let mut buffer = BytesMut::new();
     codec.encode(message.clone(), &mut buffer).unwrap();
@@ -34,7 +34,7 @@ fn it_encodes_and_decodes_write_no_timestamp() {
 fn it_encodes_and_decodes_write_no_lock() {
     let mut payload = BytesMut::with_capacity(16);
     payload.put_slice(b"0123456789123456");
-    let message = MessagerBuilder::new_write(Some(120), 10, false, 5, payload).unwrap();
+    let message = MessagerBuilder::new_write(Some(120), 10, false, 5, payload.freeze()).unwrap();
     let mut codec = VmbCodec {};
     let mut buffer = BytesMut::new();
     codec.encode(message.clone(), &mut buffer).unwrap();
@@ -46,7 +46,7 @@ fn it_encodes_and_decodes_write_no_lock() {
 fn it_encodes_and_decodes_write_no_lock_no_timestamp() {
     let mut payload = BytesMut::with_capacity(16);
     payload.put_slice(b"0123456789123456");
-    let message = MessagerBuilder::new_write(None, 10, false, 5, payload).unwrap();
+    let message = MessagerBuilder::new_write(None, 10, false, 5, payload.freeze()).unwrap();
     let mut codec = VmbCodec {};
     let mut buffer = BytesMut::new();
     codec.encode(message.clone(), &mut buffer).unwrap();
